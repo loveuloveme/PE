@@ -1,7 +1,38 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace PE{
+    static class Util{
+        private static string Reverse(string s){
+            char[] charArray = s.ToCharArray();
+            Array.Reverse(charArray);
+            return new string(charArray);
+        }
+
+        public static int ParseNum(System.Byte[] bytes){
+            List<string> bytesStr = new List<string>();
+
+            foreach(var byteItem in bytes){
+                bytesStr.Add(byteItem.ToString("x") == "0" ? "00" : byteItem.ToString("x"));
+            }
+
+            bytesStr.Reverse();
+
+            string result = "";
+            
+            foreach(var byteItem in bytesStr){
+                result += byteItem;
+            }
+
+            return int.Parse(result, System.Globalization.NumberStyles.HexNumber);
+        }
+
+        public static string ParseString(System.Byte[] data){
+            return System.Text.Encoding.ASCII.GetString(data);
+        }
+    }
+
     class PE{
         public class Byte{
             public uint offset;
@@ -54,6 +85,8 @@ namespace PE{
                 SizeOfOptionalHeader.read(fStream, offset);
                 Characteristics.read(fStream, offset);
             }
+
+            public int GetNumberOfSections() => Util.ParseNum(NumberOfSections.data);
         }
 
         class ImageDataDir{
@@ -64,6 +97,9 @@ namespace PE{
                 VirtualAddress.read(fStream, offset); 
                 Size.read(fStream, offset);
             }
+
+            public int GetVirtualAddress() => Util.ParseNum(this.VirtualAddress.data);
+            public int GetSize() => Util.ParseNum(this.Size.data);
         }
 
         class OptionalHeader{
@@ -135,11 +171,45 @@ namespace PE{
                 NumberOfRvaAndSizes.read(fStream, offset);
 
                 for(int i = 0; i < 16; i++){
-                    DataDirectory[i] = new ImageDataDir(fStream, 96 + 8*i);
+                    DataDirectory[i] = new ImageDataDir(fStream, offset+96 + 8*i);
                 }
             }
+
+            public int GetImageBase() => Util.ParseNum(this.ImageBase.data);
         }
 
+        class SectionHeader{
+            //long offset;
+
+            public Byte Name = new Byte(8, 0x0);
+            public Byte PhysicalAddress = new Byte(4, 0x0 + 8);
+            public Byte VirtualSize = new Byte(4, 0x0 + 12);
+            public Byte VirtualAddress = new Byte(4, 0x0 + 16);
+            public Byte SizeOfRawData = new Byte(4, 0x0 + 20);
+            public Byte PointerToRawData = new Byte(4, 0x0 + 24);
+            public Byte PointerToRelocations = new Byte(4, 0x0 + 28);
+            public Byte PointerToLinenumbers = new Byte(4, 0x0 + 32);
+            public Byte NumberOfRelocations = new Byte(2, 0x0 + 36);
+            public Byte NumberOfLinenumbers = new Byte(2, 0x0 + 38);
+            public Byte Characteristics = new Byte(4, 0x0 + 40);
+
+            public SectionHeader(Stream fStream, long offset){
+                Name.read(fStream, offset);
+                PhysicalAddress.read(fStream, offset);
+                VirtualSize.read(fStream, offset);
+                VirtualAddress.read(fStream, offset);
+                SizeOfRawData.read(fStream, offset);
+                PointerToRawData.read(fStream, offset);
+                PointerToRelocations.read(fStream, offset);
+                PointerToLinenumbers.read(fStream, offset);
+                NumberOfRelocations.read(fStream, offset);
+                NumberOfLinenumbers.read(fStream, offset);
+                Characteristics.read(fStream, offset);
+            }
+
+            public string GetName() => Util.ParseString(Name.data);
+        }
+        
         class PEHeader{
             //long offset;
 
@@ -149,28 +219,80 @@ namespace PE{
 
             public PEHeader(Stream fStream, long offset){
                 signature.read(fStream, offset);
-                fileHeader = new FileHeader(fStream, offset + 1);
-                optionalHeader = new OptionalHeader(fStream, offset + 21);
+                fileHeader = new FileHeader(fStream, offset + 4);
+                optionalHeader = new OptionalHeader(fStream, offset + 24);
             }
+        }
+
+        class ExportTable{
+            public Byte Characteristics = new Byte(4, 0x0);
+            public Byte TimeDateStamp = new Byte(4, 0x0 + 4);
+            public Byte MajorVersion = new Byte(2, 0x0 + 8);
+            public Byte MinorVersion = new Byte(2, 0x0 + 10);
+            public Byte Name = new Byte(4, 0x0 + 12);
+            public Byte Base = new Byte(4, 0x0 + 16);
+            public Byte NumberOfFunctions = new Byte(4, 0x0 + 20);
+            public Byte NumberOfNames = new Byte(4, 0x0 + 24);
+            public Byte AddressOfFunctions = new Byte(4, 0x0 + 28);
+            public Byte AddressOfNames = new Byte(4, 0x0 + 32);
+            public Byte AddressOfNameOrdinals = new Byte(4, 0x0 + 36);
+
+            public ExportTable(Stream fStream, long offset){
+                Characteristics.read(fStream, offset);
+                TimeDateStamp.read(fStream, offset);
+                MajorVersion.read(fStream, offset);
+                MinorVersion.read(fStream, offset);
+                Name.read(fStream, offset);
+                Base.read(fStream, offset);
+                NumberOfFunctions.read(fStream, offset);
+                NumberOfNames.read(fStream, offset);
+                AddressOfFunctions.read(fStream, offset); 
+                AddressOfNames.read(fStream, offset); 
+                AddressOfNameOrdinals.read(fStream, offset);
+            }
+
+            public string GetName() => Util.ParseString(Name.data);
+            public int GetAddressOfFunctions() => Util.ParseNum(AddressOfFunctions.data);
         }
 
         DosHeader dosheader;
         PEHeader peheader;
+        List<SectionHeader> sectionHeaders = new List<SectionHeader>();
+        ExportTable exportTable;
 
         public PE(string fileName){
             Stream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
             dosheader = new DosHeader(file);
-
             peheader = new PEHeader(file, dosheader.e_lfanew.data[0]);
-
             
+            for(int i = 0; i < peheader.fileHeader.GetNumberOfSections(); i++){
+                sectionHeaders.Add(new SectionHeader(file, 488+40*i));
+            }
+
+            exportTable = new ExportTable(file, peheader.optionalHeader.DataDirectory[0].GetVirtualAddress() - 0xC00);
+            Console.WriteLine(exportTable.GetAddressOfFunctions());
+            
+            // Console.WriteLine(peheader.optionalHeader.DataDirectory[0].VirtualAddress.data[0].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.DataDirectory[0].VirtualAddress.data[1].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.DataDirectory[0].VirtualAddress.data[2].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.DataDirectory[0].VirtualAddress.data[3].ToString("x"));
+            
+            //Console.WriteLine(BitConverter.ToUInt16(peheader.optionalHeader.DataDirectory[0].VirtualAddress.data)); 
+
+            // Console.WriteLine(peheader.optionalHeader.ImageBase.data[0].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.ImageBase.data[1].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.ImageBase.data[2].ToString("x"));
+            // Console.WriteLine(peheader.optionalHeader.ImageBase.data[3].ToString("x"));
+            
+            //Console.WriteLine(BitConverter.ToInt16(new System.Byte[]{peheader.optionalHeader.ImageBase.data[2], peheader.optionalHeader.ImageBase.data[3]}));
         }
     }
 
 
     class Program{
         static void Main(string[] args) {
-            new PE("7z1900-x64.exe");
+            //new PE("7z1900-x64.exe");
+            new PE("twain_32.dll");
         }
     }
 }
