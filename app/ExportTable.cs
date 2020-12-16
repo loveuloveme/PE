@@ -5,8 +5,6 @@ using System.Text;
 
 namespace PE{
     class ExportTable{
-        int _offset;
-
         public Byte Characteristics = new Byte(4, 0x0);
         public Byte TimeDateStamp = new Byte(4, 0x0 + 4);
         public Byte MajorVersion = new Byte(2, 0x0 + 8);
@@ -21,10 +19,28 @@ namespace PE{
 
         public Byte TableName;
 
-        public ExportTable(Stream fStream, long offset, int sectOffset){
-            _offset = sectOffset;
+        public List<string> names = new List<string>();
 
-            offset -= sectOffset;
+        private void GetNames(Stream fStream){
+            var res = new List<string>();
+
+            List<byte> byteName = new List<byte>();
+
+            while(true){
+                byteName.Add((byte)fStream.ReadByte());
+
+                if((int)byteName[byteName.Count - 1] == 0){
+                    res.Add(System.Text.Encoding.ASCII.GetString(byteName.ToArray()));
+                    byteName = new List<byte>();
+                }
+
+                if(res.Count == this.GetNumberOfNames()) break;
+            }
+
+            names = res;
+        }
+
+        public ExportTable(Stream fStream, long offset){
 
             Characteristics.read(fStream, offset);
             TimeDateStamp.read(fStream, offset);
@@ -40,13 +56,16 @@ namespace PE{
             
             TableName = new Byte(2, (uint)(this.GetName()));
             TableName.read(fStream, 0);
+
+            this.GetNames(fStream);
         }
 
-        public int GetName() => Util.ParseNum(Name.data) - _offset;
+        public int GetName() => Util.RVAToOffset(Util.ParseNum(Name.data));
         public int GetNumberOfFunctions() => Util.ParseNum(NumberOfFunctions.data);
         public int GetNumberOfNames() => Util.ParseNum(NumberOfNames.data);
-        public int GetAddressOfFunctions() => Util.ParseNum(AddressOfFunctions.data) - _offset;
-        public int GetAddressOfNames() => Util.ParseNum(AddressOfNames.data) - _offset;
+        public int GetAddressOfFunctions() => Util.RVAToOffset(Util.ParseNum(AddressOfFunctions.data));
+        public int GetAddressOfNames() => Util.RVAToOffset(Util.ParseNum(AddressOfNames.data));
+        public int GetAddressOfNameOrdinals() => Util.RVAToOffset(Util.ParseNum(AddressOfNameOrdinals.data));
         public string GetTableName() => Util.ParseString(TableName.data);
     }
 }
