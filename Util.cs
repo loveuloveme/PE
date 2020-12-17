@@ -28,7 +28,7 @@ namespace PE{
         static PEHeader peheader;
         static List<SectionHeader> sectionHeaders;
 
-        private static string Reverse(string s){
+        public static string Reverse(string s){
             char[] charArray = s.ToCharArray();
             Array.Reverse(charArray);
             return new string(charArray);

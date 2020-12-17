@@ -24,6 +24,11 @@ namespace PE {
             Console.WriteLine("0x"+data.ToString("x"), Color.WhiteSmoke);
         }
 
+        private void PrintProp(string name, DateTime time){
+            Console.Write("     "+name+": ", Color.Gray);
+            Console.WriteLine(time.Year, Color.WhiteSmoke);
+        }
+
         private void PrintDos(){
             PrintTitle("DOS header:");
             PrintProp("e_magic", pefile.dosheader.GetMagic());
@@ -32,13 +37,26 @@ namespace PE {
 
         private void PrintFileHeader(){
             PrintTitle("File header:");
-            PrintProp("Machine", pefile.peheader.fileHeader.GetMachine());
+            
+            if(pefile.peheader.fileHeader.GetMachine().ToString("x") == "8664"){
+                PrintProp("Machine", "x64");
+            }else if(pefile.peheader.fileHeader.GetMachine().ToString("x") == "14c"){
+                PrintProp("Machine", "Intel 386");
+            }else{
+                PrintProp("Machine", "Other");
+            }
+
             PrintProp("NumberOfSections", pefile.peheader.fileHeader.GetNumberOfSections());
-            PrintProp("TimeDateStamp", pefile.peheader.fileHeader.GetTimeDateStamp());
+
+            DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            DateTime dtfommls = dt.AddSeconds(pefile.peheader.fileHeader.GetTimeDateStamp());
+            
+            PrintProp("TimeDateStamp", dtfommls);
+
             PrintProp("PointerToSymbolTable", pefile.peheader.fileHeader.GetPointerToSymbolTable());
             PrintProp("NumberOfSymbols", pefile.peheader.fileHeader.GetNumberOfSymbols());
             PrintProp("SizeOfOptionalHeader", pefile.peheader.fileHeader.GetSizeOfOptionalHeader());
-            PrintProp("Characteristics", pefile.peheader.fileHeader.GetCharacteristics());
+            PrintProp("Characteristics", string.Join(" ", pefile.peheader.fileHeader.ParseCharacteristics().ToArray()));
         }
 
         private void PrintOptionalHeader(){

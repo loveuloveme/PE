@@ -13,6 +13,7 @@ namespace PE{
         public PE(string fileName){
             Stream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
             dosheader = new DosHeader(file);
+
             peheader = new PEHeader(file, dosheader.GetLF());
 
             for(int i = 0; i < peheader.fileHeader.GetNumberOfSections(); i++){

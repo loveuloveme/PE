@@ -9,7 +9,6 @@ namespace PE{
             var file = new PE("7z.dll");
             var printFile = new PEprint(file);
             printFile.Print();
-            //new PE("twain_32.dll");
             //new PE("7z.dll");
         }
     }
