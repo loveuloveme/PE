@@ -34,7 +34,7 @@ namespace PE{
 
         public ImageDataDir[] DataDirectory = new ImageDataDir[16];
 
-        public int GetImageBase() => Util.ParseNum(this.ImageBase.data);
+        public long GetImageBase() => Util.ParseNum64(this.ImageBase.data);
         public int GetSizeOfHeaders() => Util.ParseNum(this.SizeOfHeaders.data);
 
         public int GetMagic() => Util.ParseNum(this.Magic.data);

@@ -38,7 +38,7 @@ namespace PE{
             List<string> bytesStr = new List<string>();
 
             foreach(var byteItem in bytes){
-                bytesStr.Add(byteItem.ToString("x") == "0" ? "00" : byteItem.ToString("x"));
+                bytesStr.Add(byteItem.ToString("x") == "0" ? "00" : byteItem.ToString("x").PadLeft(2, '0'));
             }
 
             bytesStr.Reverse();
@@ -50,6 +50,24 @@ namespace PE{
             }
 
             return int.Parse(result, System.Globalization.NumberStyles.HexNumber);
+        }
+
+        public static long ParseNum64(System.Byte[] bytes){
+            List<string> bytesStr = new List<string>();
+
+            foreach(var byteItem in bytes){
+                bytesStr.Add(byteItem.ToString("x") == "0" ? "00" : byteItem.ToString("x").PadLeft(2, '0'));
+            }
+
+            bytesStr.Reverse();
+
+            string result = "";
+            
+            foreach(var byteItem in bytesStr){
+                result += byteItem;
+            }
+
+            return Int64.Parse(result, System.Globalization.NumberStyles.HexNumber);
         }
 
         public static string ParseString(System.Byte[] data){

@@ -13,6 +13,8 @@ namespace PE{
         public PE(string fileName){
             Stream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
             dosheader = new DosHeader(file);
+            
+            if(dosheader.GetMagic() != "MZ") throw new System.Exception("Not PE");
 
             peheader = new PEHeader(file, dosheader.GetLF());
 
@@ -26,7 +28,11 @@ namespace PE{
                 exportTable = new ExportTable(file, Util.RVAToOffset(peheader.optionalHeader.DataDirectory[0].GetVirtualAddress()));
             }
 
-            importTable = new ImportTable(file, Util.RVAToOffset(peheader.optionalHeader.DataDirectory[1].GetVirtualAddress()));
+            if(Util.RVAToOffset(peheader.optionalHeader.DataDirectory[1].GetVirtualAddress()) != -1){
+                importTable = new ImportTable(file, Util.RVAToOffset(peheader.optionalHeader.DataDirectory[1].GetVirtualAddress()));
+            }
+
+            
         }
     }
 }

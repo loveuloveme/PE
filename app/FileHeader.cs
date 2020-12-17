@@ -3,8 +3,6 @@ using System.Collections.Generic;
 
 namespace PE{
     class FileHeader{
-        long offset;
-
         public Byte Machine = new Byte(2, 0x0);
         public Byte NumberOfSections = new Byte(2, 0x0 + 2);
         public Byte TimeDateStamp = new Byte(4, 0x0 + 4);
@@ -27,20 +25,12 @@ namespace PE{
             for(int i = 0; i < TimeDateStamp.byteCount; i++){    
                 byteName += Util.Reverse(System.Convert.ToString(fStream.ReadByte(), 2).PadLeft(8, '0'));
             }
-
-            //byteName += "1";
-
-            //byteName = Util.Reverse(byteName);
-
-            System.Console.WriteLine(byteName);
         }
 
         public int GetMachine() => Util.ParseNum(Machine.data);
         public int GetNumberOfSections() => Util.ParseNum(NumberOfSections.data);
 
-        public long GetTimeDateStamp(){
-            return System.Convert.ToUInt32(byteName, 2);
-        }
+        public long GetTimeDateStamp() => Util.ParseNum64(TimeDateStamp.data);
 
         public List<string> ParseCharacteristics(){
             var chars = new List<string>();

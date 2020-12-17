@@ -17,7 +17,7 @@ namespace PE{
             Byte Magic = new Byte(2, (uint)(offset + 24));
             Magic.read(fStream);
 
-            if(Util.ParseNum(Magic.data) == 43){
+            if(Util.ParseNum(Magic.data) == 523){
                 is32plus = true;
                 optionalHeader = new OptionalHeader64(fStream, offset + 24);
             }else{

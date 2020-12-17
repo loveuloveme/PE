@@ -19,14 +19,29 @@ namespace PE {
             Console.WriteLine(data, Color.WhiteSmoke);
         }
 
-        private void PrintProp(string name, int data){
+        private void PrintProp(string name, int data, bool parse = true){
             Console.Write("     "+name+": ", Color.Gray);
-            Console.WriteLine("0x"+data.ToString("x"), Color.WhiteSmoke);
+            
+            if(parse){
+                Console.WriteLine("0x"+data.ToString("x"), Color.WhiteSmoke);
+            }else{
+                Console.WriteLine(data, Color.WhiteSmoke);
+            }
+        }
+
+        private void PrintProp(string name, long data, bool parse = true){
+            Console.Write("     "+name+": ", Color.Gray);
+            
+            if(parse){
+                Console.WriteLine("0x"+data.ToString("x"), Color.WhiteSmoke);
+            }else{
+                Console.WriteLine(data, Color.WhiteSmoke);
+            }
         }
 
         private void PrintProp(string name, DateTime time){
             Console.Write("     "+name+": ", Color.Gray);
-            Console.WriteLine(time.Year, Color.WhiteSmoke);
+            Console.WriteLine($"{time.Day.ToString().PadLeft(2, '0')}:{time.Month.ToString().PadLeft(2, '0')}:{time.Year}", Color.WhiteSmoke);
         }
 
         private void PrintDos(){
@@ -48,13 +63,12 @@ namespace PE {
 
             PrintProp("NumberOfSections", pefile.peheader.fileHeader.GetNumberOfSections());
 
-            DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            DateTime dtfommls = dt.AddSeconds(pefile.peheader.fileHeader.GetTimeDateStamp());
-            
-            PrintProp("TimeDateStamp", dtfommls);
+            DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+    
+            PrintProp("TimeDateStamp", origin.AddSeconds(pefile.peheader.fileHeader.GetTimeDateStamp()));
 
             PrintProp("PointerToSymbolTable", pefile.peheader.fileHeader.GetPointerToSymbolTable());
-            PrintProp("NumberOfSymbols", pefile.peheader.fileHeader.GetNumberOfSymbols());
+            PrintProp("NumberOfSymbols", pefile.peheader.fileHeader.GetNumberOfSymbols(), false);
             PrintProp("SizeOfOptionalHeader", pefile.peheader.fileHeader.GetSizeOfOptionalHeader());
             PrintProp("Characteristics", string.Join(" ", pefile.peheader.fileHeader.ParseCharacteristics().ToArray()));
         }
@@ -83,7 +97,57 @@ namespace PE {
             PrintProp("SizeOfImage", pefile.peheader.optionalHeader.GetSizeOfImage());
             PrintProp("SizeOfHeaders", pefile.peheader.optionalHeader.GetSizeOfHeaders());
             PrintProp("CheckSum", pefile.peheader.optionalHeader.GetCheckSum());
-            PrintProp("Subsystem", pefile.peheader.optionalHeader.GetSubsystem());
+
+            var subSys = pefile.peheader.optionalHeader.GetSubsystem();
+            var sysStr = "";
+            
+            switch (pefile.peheader.optionalHeader.GetSubsystem()){
+                case 0:
+                    sysStr = "IMAGE_SUBSYSTEM_UNKNOWN";
+                    break;
+                case 1:
+                    sysStr = "IMAGE_SUBSYSTEM_NATIVE";
+                    break;
+                case 2:
+                    sysStr = "IMAGE_SUBSYSTEM_WINDOWS_GUI";
+                    break;
+                case 3:
+                    sysStr = "IMAGE_SUBSYSTEM_WINDOWS_CUI";
+                    break;
+                case 5:
+                    sysStr = "IMAGE_SUBSYSTEM_OS2_CUI";
+                    break;
+                case 7:
+                    sysStr = "IMAGE_SUBSYSTEM_POSIX_CUI";
+                    break;
+                case 8:
+                    sysStr = "IMAGE_SUBSYSTEM_NATIVE_WINDOWS";
+                    break;
+                case 9:
+                    sysStr = "IMAGE_SUBSYSTEM_WINDOWS_CE_GUI";
+                    break;
+                case 10:
+                    sysStr = "IMAGE_SUBSYSTEM_EFI_APPLICATION";
+                    break;
+                case 11:
+                    sysStr = "IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER";
+                    break;
+                case 12:
+                    sysStr = "IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER";
+                    break;
+                case 13:
+                    sysStr = "IMAGE_SUBSYSTEM_EFI_ROM";
+                    break;
+                case 14:
+                    sysStr = "IMAGE_SUBSYSTEM_XBOX";
+                    break;
+                case 16:
+                    sysStr = "IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION";
+                    break;
+            }
+
+            PrintProp("Subsystem", sysStr);
+
             PrintProp("DllCharacteristics", pefile.peheader.optionalHeader.GetDllCharacteristics());
             PrintProp("SizeOfStackReserve", pefile.peheader.optionalHeader.GetSizeOfStackReserve());
             PrintProp("SizeOfStackCommit", pefile.peheader.optionalHeader.GetSizeOfStackCommit());
@@ -117,6 +181,7 @@ namespace PE {
 
         private void PrintImportTable(){
             PrintTitle("Import Table:");
+            if(pefile.importTable == null) return;
             foreach (var item in pefile.importTable.descriptors){
                 PrintProp("Import name", item.ImportName);
             }
@@ -127,7 +192,7 @@ namespace PE {
             var i = 0;
             
             foreach(var item in pefile.peheader.optionalHeader.DataDirectory){
-                PrintProp("#", i);
+                PrintProp("#", i, false);
                 PrintProp("Virtual address", item.GetVirtualAddress());
                 PrintProp("Size", item.GetSize());
                 PrintNewLine();
